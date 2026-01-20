@@ -14,9 +14,9 @@ const {
 
 // ============ CONFIG ============
 const TOKEN = process.env.DISCORD_TOKEN;
-const REGISTRO_CHANNEL_ID = "1082824968313774109";
-const PROMOCAO_CHANNEL_ID = "1082824968313774107";
-const LOG_CHANNEL_ID = "1082824968611561503";
+const REGISTRO_CHANNEL_ID = "1463289005813661748";
+const PROMOCAO_CHANNEL_ID = "1463289116241432690";
+const LOG_CHANNEL_ID = "1463289165985878128";
 // ================================
 
 const client = new Client({
