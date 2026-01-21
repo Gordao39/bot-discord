@@ -15,10 +15,9 @@ const {
 const TOKEN = process.env.DISCORD_TOKEN;
 
 const REGISTRO_CHANNEL_ID = "1463289005813661748";
-const LOG_CHANNEL_ID = "1463289165985878128";
 const PROMOCAO_CHANNEL_ID = "1463289116241432690";
+const LOG_CHANNEL_ID = "1463289165985878128";
 
-// 👇 SUA IMAGEM DE BOAS-VINDAS
 const IMAGEM_REGISTRO =
   "https://cdn.discordapp.com/attachments/946413761416282152/1461839050263756961/logo_mec_sem_fundo_londres.png";
 // =========================================
@@ -26,9 +25,22 @@ const IMAGEM_REGISTRO =
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages
   ]
 });
+
+// ================= FUNÇÃO LIMPAR PAINEL =================
+async function limparPainel(channelId) {
+  const channel = await client.channels.fetch(channelId);
+  const mensagens = await channel.messages.fetch({ limit: 50 });
+
+  const doBot = mensagens.filter(m => m.author.id === client.user.id);
+
+  if (doBot.size > 0) {
+    await channel.bulkDelete(doBot, true).catch(() => {});
+  }
+}
 
 // ================= EMBEDS =================
 const embedRegistroPainel = new EmbedBuilder()
@@ -90,6 +102,11 @@ async function enviarBotaoPromocao() {
 client.once("clientReady", async () => {
   console.log(`✅ Bot online: ${client.user.tag}`);
 
+  // 🧼 LIMPA PAINÉIS ANTIGOS
+  await limparPainel(REGISTRO_CHANNEL_ID);
+  await limparPainel(PROMOCAO_CHANNEL_ID);
+
+  // 🔁 ENVIA APENAS UM PAINEL
   await enviarBotaoRegistro();
   await enviarBotaoPromocao();
 });
@@ -98,7 +115,6 @@ client.once("clientReady", async () => {
 client.on("interactionCreate", async interaction => {
   try {
 
-    // ===== BOTÃO REGISTRO =====
     if (interaction.isButton() && interaction.customId === "registrar") {
       const modal = new ModalBuilder()
         .setCustomId("modalRegistro")
@@ -109,7 +125,6 @@ client.on("interactionCreate", async interaction => {
           new TextInputBuilder()
             .setCustomId("nome")
             .setLabel("Nome e Sobrenome")
-            .setPlaceholder("Ex: Clayton Silva")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         ),
@@ -117,7 +132,6 @@ client.on("interactionCreate", async interaction => {
           new TextInputBuilder()
             .setCustomId("id")
             .setLabel("ID")
-            .setPlaceholder("Ex: 123")
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         )
@@ -126,7 +140,6 @@ client.on("interactionCreate", async interaction => {
       return interaction.showModal(modal);
     }
 
-    // ===== MODAL REGISTRO =====
     if (
       interaction.type === InteractionType.ModalSubmit &&
       interaction.customId === "modalRegistro"
@@ -137,9 +150,7 @@ client.on("interactionCreate", async interaction => {
             new EmbedBuilder()
               .setColor(0xe84118)
               .setTitle("❌ Permissão insuficiente")
-              .setDescription(
-                "Não tenho permissão para alterar seu nickname."
-              )
+              .setDescription("Não posso alterar seu nickname.")
           ],
           flags: 64
         });
@@ -151,20 +162,20 @@ client.on("interactionCreate", async interaction => {
       const nick = `[Mec. Jr] ${nome} | ${id}`;
       await interaction.member.setNickname(nick);
 
-      // ===== LOG =====
-      const embedLog = new EmbedBuilder()
-        .setColor(0x0984e3)
-        .setTitle("🆕 Novo Registro")
-        .addFields(
-          { name: "👤 Usuário", value: interaction.user.tag },
-          { name: "🧾 Nickname", value: nick }
-        )
-        .setTimestamp();
-
       const log = await client.channels.fetch(LOG_CHANNEL_ID);
-      log.send({ embeds: [embedLog] });
+      log.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x0984e3)
+            .setTitle("🆕 Novo Registro")
+            .addFields(
+              { name: "Usuário", value: interaction.user.tag },
+              { name: "Nickname", value: nick }
+            )
+            .setTimestamp()
+        ]
+      });
 
-      // ===== EMBED COM IMAGEM =====
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
@@ -173,28 +184,16 @@ client.on("interactionCreate", async interaction => {
             .setDescription(
               `Parabéns **${nome}**!\n` +
               "🔧 Você agora faz parte da **Mecânica**.\n" +
-              "📋 Siga as regras e bom trabalho!"
+              "📋 Bom trabalho!"
             )
             .setImage(IMAGEM_REGISTRO)
-            .setFooter({ text: "Mecânica RP • Bom trabalho!" })
         ],
         flags: 64
       });
     }
 
-  } catch (error) {
-    console.error(error);
-    if (!interaction.replied) {
-      interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0xe84118)
-            .setTitle("❌ Erro")
-            .setDescription("Ocorreu um erro inesperado.")
-        ],
-        flags: 64
-      });
-    }
+  } catch (err) {
+    console.error(err);
   }
 });
 
